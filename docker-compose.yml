@@ -1,0 +1,37 @@
+services:
+  app:
+    image: ghcr.io/cvinit/dujiao-order:main
+    ports:
+      - "8080:8080"
+    environment:
+      DATABASE_URL: postgres://dujiao:${PG_PASSWORD:-changeme}@db:5432/dujiao_order?sslmode=disable
+      LISTEN_ADDR: ":8080"
+      TURNSTILE_SITE_KEY: ${TURNSTILE_SITE_KEY:-}
+      TURNSTILE_SECRET_KEY: ${TURNSTILE_SECRET_KEY:-}
+      RATE_LIMIT_RPS: ${RATE_LIMIT_RPS:-1}
+      RATE_LIMIT_BURST: ${RATE_LIMIT_BURST:-3}
+      BAN_THRESHOLD: ${BAN_THRESHOLD:-10}
+      BAN_DURATION: ${BAN_DURATION:-15m}
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: dujiao
+      POSTGRES_PASSWORD: ${PG_PASSWORD:-changeme}
+      POSTGRES_DB: dujiao_order
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./initdb:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dujiao -d dujiao_order"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  pgdata:

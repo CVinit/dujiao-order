@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>订单查询</title>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+            background: #f5f7fa;
+            color: #333;
+            line-height: 1.6;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 640px;
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 1.5rem;
+            margin-bottom: 24px;
+            color: #1a1a2e;
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            border-bottom: 2px solid #e0e0e0;
+            margin-bottom: 20px;
+        }
+
+        .tab {
+            flex: 1;
+            text-align: center;
+            padding: 10px 0;
+            cursor: pointer;
+            font-size: 0.95rem;
+            color: #888;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+            transition: color 0.2s, border-color 0.2s;
+            user-select: none;
+        }
+
+        .tab:hover { color: #555; }
+
+        .tab.active {
+            color: #4a6cf7;
+            border-bottom-color: #4a6cf7;
+            font-weight: 600;
+        }
+
+        /* Form */
+        .form-card {
+            background: #fff;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.85rem;
+            color: #666;
+            margin-bottom: 6px;
+            font-weight: 500;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            transition: border-color 0.2s;
+            outline: none;
+        }
+
+        .form-group input:focus {
+            border-color: #4a6cf7;
+            box-shadow: 0 0 0 3px rgba(74,108,247,0.1);
+        }
+
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        .turnstile-wrapper {
+            margin-bottom: 16px;
+            min-height: 40px;
+        }
+
+        .btn-submit {
+            width: 100%;
+            padding: 12px;
+            background: #4a6cf7;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .btn-submit:hover { background: #3b5de7; }
+        .btn-submit:active { background: #2f4fc7; }
+
+        /* Error message */
+        .error-msg {
+            background: #fff2f0;
+            border: 1px solid #ffccc7;
+            color: #cf1322;
+            padding: 10px 14px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            font-size: 0.9rem;
+        }
+
+        /* Result section */
+        .result-section {
+            margin-top: 24px;
+        }
+
+        .result-section h2 {
+            font-size: 1.1rem;
+            margin-bottom: 16px;
+            color: #1a1a2e;
+        }
+
+        .order-card {
+            background: #fff;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+            margin-bottom: 16px;
+        }
+
+        .order-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .order-gd-name {
+            font-weight: 600;
+            font-size: 1rem;
+            color: #1a1a2e;
+        }
+
+        .order-status {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .status-pending_payment {
+            background: #fffbe6;
+            color: #d48806;
+            border: 1px solid #ffe58f;
+        }
+
+        .status-paid {
+            background: #f6ffed;
+            color: #389e0d;
+            border: 1px solid #b7eb8f;
+        }
+
+        .status-expired {
+            background: #f5f5f5;
+            color: #999;
+            border: 1px solid #d9d9d9;
+        }
+
+        .order-info {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 6px 16px;
+            font-size: 0.9rem;
+        }
+
+        .order-info dt {
+            color: #888;
+        }
+
+        .order-info dd {
+            color: #333;
+            text-align: right;
+        }
+
+        .order-info dd.price {
+            font-weight: 600;
+            color: #cf1322;
+        }
+
+        /* Card secret box */
+        .card-secret-box {
+            margin-top: 14px;
+            background: #f9f9fb;
+            border: 1px dashed #d9d9d9;
+            border-radius: 8px;
+            padding: 14px;
+        }
+
+        .card-secret-box h4 {
+            font-size: 0.85rem;
+            color: #888;
+            margin-bottom: 8px;
+        }
+
+        .card-secret-content {
+            font-family: "SF Mono", "Fira Code", "Consolas", monospace;
+            font-size: 0.85rem;
+            white-space: pre-wrap;
+            word-break: break-all;
+            background: #fff;
+            border: 1px solid #eee;
+            border-radius: 6px;
+            padding: 10px;
+            color: #333;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .btn-copy {
+            margin-top: 8px;
+            padding: 6px 14px;
+            background: #4a6cf7;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .btn-copy:hover { background: #3b5de7; }
+        .btn-copy:active { background: #2f4fc7; }
+        .btn-copy.copied { background: #389e0d; }
+
+        @media (max-width: 480px) {
+            body { padding: 12px; }
+            .form-card, .order-card { padding: 16px; }
+            h1 { font-size: 1.25rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>订单查询</h1>
+
+        <div class="form-card">
+            <form action="/query" method="POST" id="queryForm">
+                <div class="tabs">
+                    <div class="tab {{if eq .QueryType "email"}}active{{else if eq .QueryType ""}}active{{end}}" data-tab="email" onclick="switchTab('email')">邮箱查询</div>
+                    <div class="tab {{if eq .QueryType "order_no"}}active{{end}}" data-tab="order_no" onclick="switchTab('order_no')">订单号查询</div>
+                </div>
+
+                <input type="hidden" name="query_type" id="queryTypeInput" value="{{if eq .QueryType "order_no"}}order_no{{else}}email{{end}}">
+
+                <div class="tab-content {{if or (eq .QueryType "email") (eq .QueryType "")}}active{{end}}" id="tab-email">
+                    <div class="form-group">
+                        <label for="email">邮箱地址</label>
+                        <input type="email" id="email" name="email" value="{{.Email}}" placeholder="请输入购买时使用的邮箱" required>
+                    </div>
+                </div>
+
+                <div class="tab-content {{if eq .QueryType "order_no"}}active{{end}}" id="tab-order_no">
+                    <div class="form-group">
+                        <label for="order_no">订单号</label>
+                        <input type="text" id="order_no" name="order_no" value="{{.OrderNo}}" placeholder="请输入订单号">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="order_password">查询密码</label>
+                    <input type="text" id="order_password" name="order_password" placeholder="请输入查询密码" required>
+                </div>
+
+                {{if .TurnstileSiteKey}}
+                <div class="turnstile-wrapper">
+                    <div class="cf-turnstile" data-sitekey="{{.TurnstileSiteKey}}" data-theme="light"></div>
+                </div>
+                {{end}}
+
+                <button type="submit" class="btn-submit">查询</button>
+            </form>
+
+            {{if .ErrorMessage}}
+            <div class="error-msg" style="margin-top:16px">{{.ErrorMessage}}</div>
+            {{end}}
+        </div>
+
+        {{if .HasResult}}
+        <div class="result-section">
+            {{if .SingleOrder}}
+                <h2>订单详情</h2>
+                {{template "order-card" .SingleOrder}}
+            {{else if .Orders}}
+                <h2>查询结果（共{{len .Orders}}条）</h2>
+                {{range .Orders}}
+                {{template "order-card" .}}
+                {{end}}
+            {{end}}
+        </div>
+        {{end}}
+    </div>
+
+    {{if .TurnstileSiteKey}}
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+    {{end}}
+
+    <script>
+        function switchTab(tab) {
+            document.querySelectorAll('.tab').forEach(function(t) {
+                t.classList.toggle('active', t.getAttribute('data-tab') === tab);
+            });
+            document.querySelectorAll('.tab-content').forEach(function(tc) {
+                tc.classList.remove('active');
+            });
+            document.getElementById('tab-' + tab).classList.add('active');
+            document.getElementById('queryTypeInput').value = tab;
+        }
+
+        function copyCardSecret(btn, id) {
+            var el = document.getElementById(id);
+            if (!el) return;
+            var text = el.textContent || el.innerText;
+
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(function() {
+                    btn.textContent = '已复制';
+                    btn.classList.add('copied');
+                    setTimeout(function() {
+                        btn.textContent = '复制卡密';
+                        btn.classList.remove('copied');
+                    }, 2000);
+                });
+            } else {
+                var range = document.createRange();
+                range.selectNodeContents(el);
+                var sel = window.getSelection();
+                sel.removeAllRanges();
+                sel.addRange(range);
+                try {
+                    document.execCommand('copy');
+                    btn.textContent = '已复制';
+                    btn.classList.add('copied');
+                    setTimeout(function() {
+                        btn.textContent = '复制卡密';
+                        btn.classList.remove('copied');
+                    }, 2000);
+                } catch(e) {
+                    // ignore
+                }
+                sel.removeAllRanges();
+            }
+        }
+
+        // When switching tabs, clear validation state
+        document.querySelectorAll('.tab').forEach(function(t) {
+            t.addEventListener('click', function() {
+                var tab = t.getAttribute('data-tab');
+                var emailInput = document.getElementById('email');
+                var orderNoInput = document.getElementById('order_no');
+                if (tab === 'email') {
+                    emailInput.required = true;
+                    orderNoInput.required = false;
+                } else {
+                    emailInput.required = false;
+                    orderNoInput.required = true;
+                }
+            });
+        });
+
+        // Set initial required state
+        (function() {
+            var currentTab = document.getElementById('queryTypeInput').value;
+            var emailInput = document.getElementById('email');
+            var orderNoInput = document.getElementById('order_no');
+            if (currentTab === 'email') {
+                emailInput.required = true;
+                orderNoInput.required = false;
+            } else {
+                emailInput.required = false;
+                orderNoInput.required = true;
+            }
+        })();
+    </script>
+
+    {{define "order-card"}}
+    <div class="order-card">
+        <div class="order-header">
+            <span class="order-gd-name">{{.GDName}}</span>
+            <span class="order-status status-{{.Status}}">{{.DisplayStatus}}</span>
+        </div>
+        <dl class="order-info">
+            <dt>订单号</dt>
+            <dd>{{.OrderNo}}</dd>
+            {{if .TradeNo}}
+            <dt>交易号</dt>
+            <dd>{{.TradeNo}}</dd>
+            {{end}}
+            {{if .GPName}}
+            <dt>分组</dt>
+            <dd>{{.GPName}}</dd>
+            {{end}}
+            <dt>数量</dt>
+            <dd>{{.BuyAmount}}</dd>
+            <dt>商品单价</dt>
+            <dd>{{.GoodsPrice}}</dd>
+            {{if ne .CouponDiscount "0.00"}}
+            <dt>优惠券折扣</dt>
+            <dd>-{{.CouponDiscount}}</dd>
+            {{end}}
+            {{if ne .WholesaleDiscount "0.00"}}
+            <dt>批发折扣</dt>
+            <dd>-{{.WholesaleDiscount}}</dd>
+            {{end}}
+            <dt>实付金额</dt>
+            <dd class="price">{{.ActualPrice}}</dd>
+            <dt>邮箱</dt>
+            <dd>{{.Email}}</dd>
+            <dt>下单时间</dt>
+            <dd>{{.CreatedAt}}</dd>
+        </dl>
+        {{if .HasCardSecret}}
+        <div class="card-secret-box">
+            <h4>卡密内容</h4>
+            <div class="card-secret-content" id="secret-{{.OrderNo}}">{{.Info}}</div>
+            <button class="btn-copy" onclick="copyCardSecret(this, 'secret-{{.OrderNo}}')">复制卡密</button>
+        </div>
+        {{end}}
+    </div>
+    {{end}}
+</body>
+</html>

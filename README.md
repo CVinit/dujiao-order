@@ -1,83 +1,83 @@
 # dujiao-order
 
-Go web application for querying orders from a dujiaoka-style system backed by PostgreSQL.
+基于 Go 语言的独角数卡（dujiaoka）订单查询页面，使用 PostgreSQL 数据库。
 
-## Features
+## 功能特性
 
-- Two query modes: email + order password (list all orders) / order number + order password (single order)
-- Card secret (卡密) display with one-click copy
-- Cloudflare Turnstile human verification
-- Per-IP rate limiting (token bucket)
-- Failed attempt tracking with auto-expiring IP bans
-- Timing attack prevention (password verified in SQL WHERE clause)
-- Unified error messages that never leak email/order existence
+- 双模式查询：邮箱 + 查询密码（查询所有订单）/ 订单号 + 查询密码（查询单条订单）
+- 卡密内容展示，一键复制
+- Cloudflare Turnstile 人机验证
+- 基于 IP 的令牌桶限流
+- 连续查询失败自动封禁（到期自动解封）
+- 时序攻击防护（密码在 SQL WHERE 子句中比对）
+- 统一错误提示，不泄露邮箱或订单号是否存在
 
-## Deploy with Docker Compose (Recommended)
+## Docker Compose 部署（推荐）
 
-### 1. Clone and configure
+### 1. 克隆并配置
 
 ```bash
 git clone https://github.com/CVinit/dujiao-order.git
 cd dujiao-order
 ```
 
-Create a `.env` file (or export environment variables):
+创建 `.env` 文件（或直接导出环境变量）：
 
 ```bash
-# Required: set a strong database password
+# 必填：设置一个安全的数据库密码
 PG_PASSWORD=your_secure_password
 
-# Optional: Cloudflare Turnstile (leave empty to skip)
+# 可选：Cloudflare Turnstile 密钥（留空则跳过验证）
 TURNSTILE_SITE_KEY=0x4AAAAAAAxxxxxxxxxxxx
 TURNSTILE_SECRET_KEY=0x4AAAAAAAxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
-# Optional: rate limiting and ban defaults are fine for most cases
+# 可选：限流和封禁参数，默认值适用于大多数场景
 # RATE_LIMIT_RPS=1
 # RATE_LIMIT_BURST=3
 # BAN_THRESHOLD=10
 # BAN_DURATION=15m
 ```
 
-### 2. Start services
+### 2. 启动服务
 
 ```bash
 docker compose up -d
 ```
 
-This starts:
-- **app** — dujiao-order on port 8080
-- **db** — PostgreSQL 16 with the orders table auto-created on first run
+启动内容包括：
+- **app** — dujiao-order 应用，监听 8080 端口
+- **db** — PostgreSQL 16，首次启动自动创建 orders 表
 
-The migration SQL is mounted into PostgreSQL's `docker-entrypoint-initdb.d/`, so the `orders` table is created automatically when the database initializes.
+迁移 SQL 通过 `docker-entrypoint-initdb.d/` 挂载，数据库初始化时自动创建 `orders` 表。
 
-### 3. Open the page
+### 3. 访问页面
 
-Visit `http://localhost:8080` in your browser.
+浏览器打开 `http://localhost:8080`。
 
-### 4. (Optional) Import data from MySQL
+### 4.（可选）从 MySQL 导入数据
 
-If you're migrating from an existing dujiaoka MySQL database, see [docs/mysql-to-postgresql-migration.md](docs/mysql-to-postgresql-migration.md) for the step-by-step guide.
+如果你从已有的 dujiaoka MySQL 数据库迁移，请参考 [MySQL→PostgreSQL 迁移教程](docs/mysql-to-postgresql-migration.md)。
 
-### Manage the deployment
+### 管理部署
 
 ```bash
-# View logs
+# 查看日志
 docker compose logs -f app
 
-# Stop
+# 停止服务
 docker compose down
 
-# Stop and remove data (resets the database)
+# 停止并删除数据（重置数据库）
 docker compose down -v
 
-# Update to latest image
+# 更新到最新镜像
 docker compose pull app
 docker compose up -d app
 ```
 
-## Deploy with Docker (standalone)
+## Docker 独立部署
 
-If you already have a PostgreSQL instance:
+如果你已有 PostgreSQL 实例：
 
 ```bash
 docker run -d --name dujiao-order \
@@ -88,48 +88,48 @@ docker run -d --name dujiao-order \
   ghcr.io/cvinit/dujiao-order:main
 ```
 
-Run the migration manually:
+手动执行数据库迁移：
 
 ```bash
-# Install goose
+# 安装 goose
 go install github.com/pressly/goose/v3/cmd/goose@latest
 
-# Apply migration
+# 执行迁移
 goose postgres "postgres://user:password@db-host:5432/dujiao_order?sslmode=disable" up
 ```
 
-## Local Development
+## 本地开发
 
-1. Copy `.env.example` to `.env` and fill in the values.
-2. Run the PostgreSQL migration:
+1. 复制 `.env.example` 为 `.env` 并填入配置值。
+2. 执行 PostgreSQL 迁移：
    ```bash
    goose postgres "$DATABASE_URL" up
    ```
-3. Start the server:
+3. 启动服务：
    ```bash
    go run .
    ```
-4. Open `http://localhost:8080` in your browser.
+4. 浏览器打开 `http://localhost:8080`。
 
-## Configuration
+## 配置项
 
-All configuration is via environment variables. See `.env.example` for the full list and defaults.
+所有配置通过环境变量管理，详见 `.env.example`。
 
-| Variable | Default | Description |
+| 变量 | 默认值 | 说明 |
 |---|---|---|
-| `DATABASE_URL` | (required) | PostgreSQL connection string |
-| `LISTEN_ADDR` | `:8080` | Server listen address |
-| `TURNSTILE_SITE_KEY` | (empty) | Cloudflare Turnstile site key |
-| `TURNSTILE_SECRET_KEY` | (empty) | Cloudflare Turnstile secret key |
-| `RATE_LIMIT_RPS` | `1` | Requests per second per IP |
-| `RATE_LIMIT_BURST` | `3` | Burst allowance per IP |
-| `BAN_THRESHOLD` | `10` | Failed attempts before IP ban |
-| `BAN_DURATION` | `15m` | Duration of IP ban |
+| `DATABASE_URL` | （必填） | PostgreSQL 连接字符串 |
+| `LISTEN_ADDR` | `:8080` | 服务监听地址 |
+| `TURNSTILE_SITE_KEY` | （空） | Cloudflare Turnstile 站点密钥 |
+| `TURNSTILE_SECRET_KEY` | （空） | Cloudflare Turnstile 密钥 |
+| `RATE_LIMIT_RPS` | `1` | 每 IP 每秒请求数 |
+| `RATE_LIMIT_BURST` | `3` | 每 IP 突发允许量 |
+| `BAN_THRESHOLD` | `10` | 连续失败次数达到此值后封禁 IP |
+| `BAN_DURATION` | `15m` | IP 封禁时长 |
 
-## Migration Tutorial
+## 迁移教程
 
-See [docs/mysql-to-postgresql-migration.md](docs/mysql-to-postgresql-migration.md) for the full MySQL to PostgreSQL migration guide.
+详见 [MySQL→PostgreSQL 迁移教程](docs/mysql-to-postgresql-migration.md)。
 
-## License
+## 许可证
 
 MIT

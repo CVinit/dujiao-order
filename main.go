@@ -1,7 +1,6 @@
 package main
 
 import (
-	"database/sql"
 	"fmt"
 	"log"
 	"net/http"
@@ -11,13 +10,11 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/jackc/pgx/v5/stdlib"
+	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
 func main() {
 	cfg := loadConfig()
-
-	sql.Register("pgx", stdlib.GetDefaultDriver())
 
 	db, err := Connect(cfg)
 	if err != nil {

@@ -119,8 +119,12 @@ func loggingMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-// safeIP extracts the client IP from the request's RemoteAddr.
+// safeIP extracts the client IP, preferring X-Real-IP set by a trusted
+// reverse proxy, falling back to RemoteAddr.
 func safeIP(r *http.Request) string {
+	if ip := r.Header.Get("X-Real-IP"); ip != "" {
+		return ip
+	}
 	ip, _, err := splitHostPort(r.RemoteAddr)
 	if err != nil {
 		return r.RemoteAddr

@@ -126,6 +126,42 @@ goose postgres "postgres://user:password@db-host:5432/dujiao_order?sslmode=disab
 | `BAN_THRESHOLD` | `10` | 连续失败次数达到此值后封禁 IP |
 | `BAN_DURATION` | `15m` | IP 封禁时长 |
 
+## Nginx 反向代理
+
+```nginx
+server {
+    listen 80;
+    server_name order.example.com;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name order.example.com;
+
+    ssl_certificate     /etc/letsencrypt/live/order.example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/order.example.com/privkey.pem;
+    ssl_protocols       TLSv1.2 TLSv1.3;
+    ssl_ciphers         HIGH:!aNULL:!MD5;
+
+    add_header X-Content-Type-Options nosniff;
+    add_header X-Frame-Options DENY;
+    add_header Referrer-Policy strict-origin-when-cross-origin;
+
+    location / {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_connect_timeout 5s;
+        proxy_read_timeout 30s;
+    }
+}
+```
+
+应用通过 `X-Real-IP` 请求头获取真实客户端 IP，用于限流和封禁。使用 nginx 反代时必须配置 `proxy_set_header X-Real-IP $remote_addr`。
+
 ## 迁移教程
 
 详见 [MySQL→PostgreSQL 迁移教程](docs/mysql-to-postgresql-migration.md)。

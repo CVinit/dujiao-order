@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"net"
 	"net/http"
 	"net/url"
 	"strings"
@@ -82,10 +81,7 @@ func (rl *IPRateLimiter) cleanup(interval time.Duration) {
 // exceeds the configured rate limit.
 func (rl *IPRateLimiter) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ip, _, err := net.SplitHostPort(r.RemoteAddr)
-		if err != nil {
-			ip = r.RemoteAddr
-		}
+		ip := safeIP(r)
 
 		limiter := rl.getVisitor(ip)
 		if !limiter.Allow() {
@@ -287,10 +283,7 @@ func (bt *BanTracker) RecordSuccess(ip string) {
 // currently banned.
 func (bt *BanTracker) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ip, _, err := net.SplitHostPort(r.RemoteAddr)
-		if err != nil {
-			ip = r.RemoteAddr
-		}
+		ip := safeIP(r)
 
 		if bt.IsBanned(ip) {
 			http.Error(w, "您的IP已被临时封禁，请稍后再试", http.StatusForbidden)

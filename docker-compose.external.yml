@@ -1,0 +1,21 @@
+services:
+  app:
+    image: ghcr.io/cvinit/dujiao-order:main
+    ports:
+      - "8080:8080"
+    environment:
+      DATABASE_URL: postgres://${PG_USER:-dujiao}:${PG_PASSWORD}@${PG_HOST:-shared-postgres}:5432/dujiao_order?sslmode=disable
+      LISTEN_ADDR: ":8080"
+      TURNSTILE_SITE_KEY: ${TURNSTILE_SITE_KEY:-}
+      TURNSTILE_SECRET_KEY: ${TURNSTILE_SECRET_KEY:-}
+      RATE_LIMIT_RPS: ${RATE_LIMIT_RPS:-1}
+      RATE_LIMIT_BURST: ${RATE_LIMIT_BURST:-3}
+      BAN_THRESHOLD: ${BAN_THRESHOLD:-10}
+      BAN_DURATION: ${BAN_DURATION:-15m}
+    networks:
+      - shared-db-net
+    restart: unless-stopped
+
+networks:
+  shared-db-net:
+    external: true
